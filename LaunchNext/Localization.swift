@@ -110,6 +110,8 @@ enum LocalizationKey: String {
     case gestureSectionDescription
     case gestureEnabledTitle
     case gestureCloseOnPinchOutTitle
+    case gestureInterceptSystemPinchTitle
+    case gestureInterceptSystemPinchHintBody
     case gestureTapActionTitle
     case gestureFingerCountTitle
     case gestureFingerCountFour
@@ -704,6 +706,8 @@ final class LocalizationManager {
                 .gestureSectionDescription: "Experimental trackpad pinch and tap gestures for LaunchNext.",
                 .gestureEnabledTitle: "Enable pinch gesture",
                 .gestureCloseOnPinchOutTitle: "Close with spread gesture",
+                .gestureInterceptSystemPinchTitle: "Take over the system Apps pinch",
+                .gestureInterceptSystemPinchHintBody: "Keep Apps turned on in System Settings > Trackpad > More Gestures. LaunchNext opens in place of the system Apps view.",
                 .gestureTapActionTitle: "Tap gesture",
                 .gestureFingerCountTitle: "Gesture fingers",
                 .gestureFingerCountFour: "4 fingers",
@@ -1893,6 +1897,8 @@ final class LocalizationManager {
                 .gestureSectionDescription: "LaunchNext 用の実験的なトラックパッドのピンチとタップジェスチャーです。",
                 .gestureEnabledTitle: "ピンチジェスチャーを有効化",
                 .gestureCloseOnPinchOutTitle: "広げるジェスチャーで閉じる",
+                .gestureInterceptSystemPinchTitle: "システムの「アプリ」ピンチを横取りする",
+                .gestureInterceptSystemPinchHintBody: "システム設定 > トラックパッド > その他のジェスチャで「アプリ」をオンのままにしてください。システムの「アプリ」画面の代わりに LaunchNext が開きます。",
                 .gestureTapActionTitle: "タップジェスチャー",
                 .gestureFingerCountTitle: "ジェスチャーの指の本数",
                 .gestureFingerCountFour: "4本指",

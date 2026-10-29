@@ -58,6 +58,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
     // Remove this property if gesture support is dropped together with
     // bindGesturePreference()/updateGestureMonitor()/handleGestureTrigger().
     private var gestureMonitor: GestureMonitor?
+    private var systemPinchInterceptor: SystemPinchInterceptor?
     // Wake recovery work items for the experimental gesture monitor.
     // If gesture support is removed later, delete this together with
     // bindGestureWakeRecovery()/scheduleGestureWakeRecovery().
@@ -360,17 +361,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
                 appStore.$gestureTapAction.removeDuplicates(),
                 appStore.$gestureFingerCount.removeDuplicates()
             ),
-            Publishers.CombineLatest(
+            Publishers.CombineLatest3(
                 appStore.$gestureDeviceSelectionMode.removeDuplicates(),
-                appStore.$gestureSelectedDeviceIDs.removeDuplicates()
+                appStore.$gestureSelectedDeviceIDs.removeDuplicates(),
+                appStore.$gestureInterceptSystemPinch.removeDuplicates()
             )
         )
         .receive(on: RunLoop.main)
         .sink { [weak self] combined, deviceSelection in
             let (enabled, closeOnPinchOut, tapAction, fingerCount) = combined
-            let (deviceSelectionMode, selectedDeviceIDs) = deviceSelection
+            let (deviceSelectionMode, selectedDeviceIDs, interceptSystemPinch) = deviceSelection
             self?.updateGestureMonitor(
-                enabled: enabled,
+                // The intercepted system pinch replaces the multitouch pinch.
+                enabled: enabled && !interceptSystemPinch,
                 closeOnPinchOut: closeOnPinchOut,
                 tapAction: tapAction,
                 fingerCount: fingerCount,
@@ -379,6 +382,33 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
             )
         }
         .store(in: &cancellables)
+
+        Publishers.CombineLatest(
+            appStore.$gestureInterceptSystemPinch.removeDuplicates(),
+            appStore.$gestureCloseOnPinchOut.removeDuplicates()
+        )
+        .receive(on: RunLoop.main)
+        .sink { [weak self] intercept, closeOnPinchOut in
+            self?.updateSystemPinchInterceptor(enabled: intercept, closeOnPinchOut: closeOnPinchOut)
+        }
+        .store(in: &cancellables)
+    }
+
+    private func updateSystemPinchInterceptor(enabled: Bool, closeOnPinchOut: Bool) {
+        if systemPinchInterceptor == nil {
+            systemPinchInterceptor = SystemPinchInterceptor(
+                isLaunchNextVisible: { [weak self] in self?.windowIsVisible ?? false },
+                onTrigger: { [weak self] action in
+                    DispatchQueue.main.async {
+                        self?.handleGestureTrigger(action: action)
+                    }
+                }
+            )
+        }
+        systemPinchInterceptor?.update(configuration: .init(
+            isEnabled: enabled,
+            closeOnPinchOutEnabled: closeOnPinchOut
+        ))
     }
 
     // Rebuilds the experimental gesture listener after sleep/wake.
@@ -419,6 +449,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSGestureR
                 guard self.appStore.gestureEnabled || self.appStore.gestureTapAction != .off else { return }
                 self.appStore.refreshGestureDeviceInventory()
                 self.gestureMonitor?.restart()
+                if self.appStore.gestureInterceptSystemPinch {
+                    self.systemPinchInterceptor?.restart()
+                }
             }
             gestureWakeRecoveryWorkItems.append(workItem)
             DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: workItem)

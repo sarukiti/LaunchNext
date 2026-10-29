@@ -412,6 +412,7 @@ final class AppStore: ObservableObject {
     // if the private multitouch feature is dropped later.
     static let gestureEnabledKey = "gestureEnabled"
     static let gestureCloseOnPinchOutKey = "gestureCloseOnPinchOut"
+    static let gestureInterceptSystemPinchKey = "gestureInterceptSystemPinch"
     static let gestureTapActionKey = "gestureTapAction"
     static let gestureFingerCountKey = "gestureFingerCount"
     static let gestureDeviceSelectionModeKey = "gestureDeviceSelectionMode"
@@ -1083,6 +1084,7 @@ final class AppStore: ObservableObject {
         globalHotKey = Self.loadHotKeyConfiguration()
         gestureEnabled = UserDefaults.standard.object(forKey: Self.gestureEnabledKey) as? Bool ?? false
         gestureCloseOnPinchOut = UserDefaults.standard.object(forKey: Self.gestureCloseOnPinchOutKey) as? Bool ?? false
+        gestureInterceptSystemPinch = UserDefaults.standard.object(forKey: Self.gestureInterceptSystemPinchKey) as? Bool ?? false
         gestureTapAction = GestureTapAction(rawValue: UserDefaults.standard.string(forKey: Self.gestureTapActionKey) ?? "") ?? .off
         gestureFingerCount = GestureFingerCount(rawValue: UserDefaults.standard.integer(forKey: Self.gestureFingerCountKey)) ?? .four
         gestureDeviceSelectionMode = GestureDeviceSelectionMode(rawValue: UserDefaults.standard.string(forKey: Self.gestureDeviceSelectionModeKey) ?? "") ?? .automatic
@@ -2276,6 +2278,14 @@ final class AppStore: ObservableObject {
         }
     }
 
+    // Swallows the system Apps pinch and opens LaunchNext instead.
+    @Published var gestureInterceptSystemPinch: Bool = UserDefaults.standard.bool(forKey: AppStore.gestureInterceptSystemPinchKey) {
+        didSet {
+            guard gestureInterceptSystemPinch != oldValue else { return }
+            UserDefaults.standard.set(gestureInterceptSystemPinch, forKey: Self.gestureInterceptSystemPinchKey)
+        }
+    }
+
     @Published var gestureTapAction: GestureTapAction = {
         let defaults = UserDefaults.standard
         if let rawValue = defaults.string(forKey: AppStore.gestureTapActionKey),
@@ -3076,6 +3086,7 @@ final class AppStore: ObservableObject {
         self.hideMenuBar = defaults.object(forKey: Self.hideMenuBarKey) as? Bool ?? false
         self.gestureEnabled = defaults.object(forKey: Self.gestureEnabledKey) as? Bool ?? false
         self.gestureCloseOnPinchOut = defaults.object(forKey: Self.gestureCloseOnPinchOutKey) as? Bool ?? false
+        self.gestureInterceptSystemPinch = defaults.object(forKey: Self.gestureInterceptSystemPinchKey) as? Bool ?? false
         self.gestureTapAction = GestureTapAction(rawValue: defaults.string(forKey: Self.gestureTapActionKey) ?? "") ?? .off
         self.gestureFingerCount = GestureFingerCount(rawValue: defaults.integer(forKey: Self.gestureFingerCountKey)) ?? .four
         self.gestureDeviceSelectionMode = GestureDeviceSelectionMode(rawValue: defaults.string(forKey: Self.gestureDeviceSelectionModeKey) ?? "") ?? .automatic
