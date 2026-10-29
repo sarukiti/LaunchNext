@@ -462,6 +462,28 @@ private var gestureCloseOnPinchOutBinding: Binding<Bool> {
     )
 }
 
+// The multitouch pinch is redundant while the system pinch is taken over.
+private var isOwnPinchGestureActive: Bool {
+    appStore.gestureEnabled && !appStore.gestureInterceptSystemPinch
+}
+
+// Finger count and input devices only affect the multitouch listener.
+private var isMultitouchGestureActive: Bool {
+    isOwnPinchGestureActive || appStore.gestureTapAction != .off
+}
+
+private var gestureInterceptSystemPinchBinding: Binding<Bool> {
+    Binding(
+        get: { appStore.gestureInterceptSystemPinch },
+        set: { newValue in
+            guard appStore.gestureInterceptSystemPinch != newValue else { return }
+            DispatchQueue.main.async {
+                appStore.gestureInterceptSystemPinch = newValue
+            }
+        }
+    )
+}
+
 private var gestureTapActionBinding: Binding<AppStore.GestureTapAction> {
     Binding(
         get: { appStore.gestureTapAction },
@@ -4092,6 +4114,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         .labelsHidden()
                         .toggleStyle(.switch)
                 }
+                .disabled(appStore.gestureInterceptSystemPinch)
+                .opacity(appStore.gestureInterceptSystemPinch ? 0.45 : 1)
 
                 HStack {
                     Text(appStore.localized(.gestureCloseOnPinchOutTitle))
@@ -4100,8 +4124,16 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         .labelsHidden()
                         .toggleStyle(.switch)
                 }
-                .disabled(!appStore.gestureEnabled)
-                .opacity(appStore.gestureEnabled ? 1 : 0.45)
+                .disabled(!isOwnPinchGestureActive && !appStore.gestureInterceptSystemPinch)
+                .opacity(isOwnPinchGestureActive || appStore.gestureInterceptSystemPinch ? 1 : 0.45)
+
+                HStack {
+                    Text(appStore.localized(.gestureInterceptSystemPinchTitle))
+                    Spacer()
+                    Toggle("", isOn: gestureInterceptSystemPinchBinding)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                }
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -4134,6 +4166,8 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         }
                     }
                 }
+                .disabled(!isMultitouchGestureActive)
+                .opacity(isMultitouchGestureActive ? 1 : 0.45)
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text(appStore.localized(.gestureInputDeviceTitle))
@@ -4177,11 +4211,13 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                         }
                     }
                 }
+                .disabled(!isMultitouchGestureActive)
+                .opacity(isMultitouchGestureActive ? 1 : 0.45)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(appStore.localized(.gestureSystemHintTitle))
                         .font(.footnote.weight(.semibold))
-                    Text(appStore.localized(.gestureSystemHintBody))
+                    Text(appStore.localized(appStore.gestureInterceptSystemPinch ? .gestureInterceptSystemPinchHintBody : .gestureSystemHintBody))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -5827,6 +5863,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
                     // is dropped later.
                     keys.insert(AppStore.gestureEnabledKey)
                     keys.insert(AppStore.gestureCloseOnPinchOutKey)
+                    keys.insert(AppStore.gestureInterceptSystemPinchKey)
                     keys.insert(AppStore.gestureTapActionKey)
                     keys.insert(AppStore.gestureFingerCountKey)
                     keys.insert(AppStore.gestureDeviceSelectionModeKey)
